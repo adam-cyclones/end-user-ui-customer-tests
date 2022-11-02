@@ -24,10 +24,19 @@ of the MIT license. See the LICENSE file for details.
                                     <small v-if="!field.required" class="text-muted ml-1">{{$t('pages.profile.editProfile.optional')}}</small>
                                     <ValidationProvider :rules="`${field.required ? 'required' : ''}`"  :name="field.name" v-slot="validationContext">
                                         <b-input
+                                            v-if="determineInputType(field) !== 'select'"
                                             :name="field.name"
-                                            :type="field.type === 'string' ? 'text' : field.type"
+                                            :type="determineInputType(field)"
                                             :state="getValidationState(validationContext)"
                                             v-model.trim="formFields[index].value" />
+                                        <b-select
+                                            v-if="determineInputType(field) === 'select'"
+                                            :name="field.name"
+                                            :type="determineInputType(field)"
+                                            :state="getValidationState(validationContext)"
+                                            :options="systemeUSelectLists(field)"
+                                            v-model.trim="formFields[index].value">
+                                        </b-select>
                                         <b-form-invalid-feedback>{{ validationContext.errors[0] }}</b-form-invalid-feedback>
                                     </ValidationProvider>
                                 </b-form-group>
@@ -89,7 +98,15 @@ export default {
         return {
             formFields: [],
             originalFormFields: [],
-            title: this.$t('pages.profile.editProfile.userDetailsTitle')
+            title: this.$t('pages.profile.editProfile.userDetailsTitle'),
+            selectListGender: [{
+                text: 'Male',
+                value: 'male'
+            },
+            {
+                text: 'Female',
+                value: 'female'
+            }]
         };
     },
     mounted () {
@@ -98,6 +115,42 @@ export default {
         }
     },
     methods: {
+        /**
+        * Use a suffix in name _select for select or otherwise render input by managed object type.
+        * @param {object} field Data from IDM managed user object schema
+        * @param {string} field.name The field name, could contain _select
+        * @param {string} field.type The data type to be mapped to an input type
+        * @return {string} Form field input type to render
+        */
+        determineInputType ({ type, name }) {
+            switch (type) {
+            case 'string':
+                if (name.endsWith('_select')) {
+                    return 'select';
+                }
+                return 'text';
+            default:
+                return type;
+            }
+        },
+        /**
+        * Hard coded select lists
+        * @docs https://bootstrap-vue.org/docs/components/form-select
+        * @param {object} field Data from IDM managed user object schema
+        * @param {string} field.name The field name
+        * @return {Array<{text: string, value: string}>} Data to render a select list
+        */
+        systemeUSelectLists ({ name }) {
+            switch (name) {
+            case 'gender_select':
+                return this.selectListGender;
+            default:
+                return [{
+                    text: 'No options available',
+                    value: ''
+                }];
+            }
+        },
         generateFormFields () {
             let { order, properties, required } = this.schema,
                 filteredOrder = _.filter(order, (propName) => {
