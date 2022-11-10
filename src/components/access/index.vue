@@ -10,12 +10,11 @@ of the MIT license. See the LICENSE file for details.
         <div class="card mt-4">
             <div class="card-header py-2">
                 <b-row>
-                    <b-col md="3" class="my-1">
-                        <b-btn v-if="createProperties.length > 0" type="button" variant="primary" v-b-modal.createResourceModal><i class="fa fa-plus mr-3"></i>{{$t("common.form.new")}} {{this.name}}</b-btn>
-                    </b-col>
-                    <b-col md="9" class="my-1">
+                    <b-col md="12" class="my-1">
                         <div class="d-flex">
                             <b-input-group>
+                                <b-btn class='mr-2' type="button" variant="outline-secondary" @click="selectAllPageRows">{{$t("common.form.selectAllRows")}}</b-btn>
+                                <b-btn class='mr-2' type="button" variant="danger" :disabled="!(Object.keys(selectedRows).length > 0)" v-b-modal.deleteModal>{{$t("common.form.delete")}} {{Object.keys(selectedRows).length ? `(${Object.keys(selectedRows).length})` : ' '}}</b-btn>
                                 <b-input-group-prepend>
                                     <div class="input-group-text inset">
                                         <i class='fa fa-search'></i>
@@ -25,13 +24,17 @@ of the MIT license. See the LICENSE file for details.
                                 <b-input-group-append>
                                     <b-btn variant="outline-default" :disabled="!filter" @click="clear" class="inset clear"><i class="fa fa-times-circle"></i></b-btn>
                                 </b-input-group-append>
+                                <b-btn class='ml-2' v-if="createProperties.length > 0" type="button" variant="primary" v-b-modal.createResourceModal><i class="fa fa-plus mr-3"></i>{{$t("common.form.new")}} {{name}}</b-btn>
                             </b-input-group>
                         </div>
                     </b-col>
                 </b-row>
             </div>
             <div class="card-body">
-                <b-table show-empty
+                <b-table ref="table"
+                        show-empty
+                        :selectable="true"
+                        select-mode="range"
                         table-responsive
                         stacked="lg"
                         :items="gridData"
@@ -52,6 +55,9 @@ of the MIT license. See the LICENSE file for details.
                             <b-spinner class="align-middle spinner-large text-primary my-4"></b-spinner>
                             <div>{{ $t("common.form.loading") }} {{ plural(name) }}...</div>
                             </div>
+                        </template>
+                        <template #cell(checkbox)="data">
+                            <input name="selectedRow" :ref='data.item._id' :data-index='data.index' v-model="selectedRows[data.item._id]" type="checkbox" :value="data.index"/>
                         </template>
                 </b-table>
             </div>
@@ -74,6 +80,21 @@ of the MIT license. See the LICENSE file for details.
         </div>
 
         <fr-create-resource v-if="createProperties.length > 0" @refreshGrid="clear" :resourceName="name" :resourceType="resource" :createProperties="createProperties"></fr-create-resource>
+
+        <b-modal v-if="canDelete" id="deleteModal"
+                 ref="deleteModal"
+                 :title="this.$t('pages.access.deleteModalTitle')">
+            <div>
+                {{$t('pages.access.deleteConfirmMany')}} ({{Object.keys(selectedRows).length}}) {{this.plural(this.name)}}?
+            </div>
+            <b-progress class='mt-2' :value="deleteProgress" :max="Object.keys(selectedRows).length" show-progress animated></b-progress>
+            <div slot="modal-footer" class="w-100">
+                <div class="float-right">
+                    <b-btn type="button" variant="danger" @click="deleteResources">{{$t('common.form.delete')}}</b-btn>
+                </div>
+            </div>
+        </b-modal>
+
     </b-container>
 </template>
 
@@ -106,6 +127,7 @@ export default {
             resource: this.$route.params.resourceType,
             schemaProperties: {},
             isRowSelected: false,
+            isSelectAllToggled: false,
             tableHover: true,
             gridData: [],
             columns: [],
@@ -119,13 +141,32 @@ export default {
             createProperties: [],
             userCanUpdate: false,
             isLoading: true,
-            queryThreshold: null
+            queryThreshold: null,
+            selectedRows: {},
+            deleteProgress: 0
         };
     },
     mounted () {
         this.loadData();
     },
     watch: {
+        selectedRows: {
+            handler (newSelections) {
+                Object.entries(newSelections).forEach((selection, index) => {
+                    const id = selection[0],
+                        selected = selection[1],
+                        rowIndex = Number(this.$refs[id].dataset.index);
+                    // select or deslect
+                    if (selected) {
+                        // WARN Vue anti pattern using DOM data-* attribute
+                        this.$refs.table.selectRow(rowIndex);
+                    } else {
+                        this.$refs.table.unselectRow(rowIndex);
+                    }
+                });
+            },
+            deep: true
+        },
         gridData () {
             // disallow sorting if there is a queryThreshold and the filter doesn't have at least the same number of chars as queryThreshold
             this.columns = this.columns.map((col) => {
@@ -135,9 +176,19 @@ export default {
 
                 return col;
             });
+
+            // Add a custom column
+            this.columns.unshift({
+                key: 'checkbox',
+                label: '',
+                sortable: false
+            });
         }
     },
     computed: {
+        canDelete () {
+            return Object.keys(this.selectedRows).length > 0;
+        },
         searchPlaceholder () {
             if (this.queryThreshold) {
                 return this.$t('pages.access.typeAtLeastAndEnterToSearch', { numChars: this.queryThreshold });
@@ -146,6 +197,39 @@ export default {
         }
     },
     methods: {
+        async deleteResources () {
+            this.deleteProgress = 0;
+            const idmInstance = this.getRequestService();
+
+            try {
+                for (const [id, selected] of Object.entries(this.selectedRows)) {
+                    if (selected) {
+                        console.log(id, selected);
+                        await idmInstance.delete(`${this.resource}/${this.name}/${id}`);
+                        this.deleteProgress += 1;
+                    }
+                }
+                this.displayNotification('success', this.$t('pages.access.deleteResource'));
+                this.$refs.deleteModal.hide();
+                // 'Reload' the Vue
+                this.$router.go(this.$router.currentRoute);
+            } catch (error) {
+                this.displayNotification('error', error.response.data.message);
+            }
+        },
+        selectAllPageRows () {
+            if (!this.isSelectAllToggled) {
+                // Select
+                this.$refs.table.selectAllRows();
+                this.selectedRows = Object.fromEntries(this.$refs.table.items.map(item => [item._id, true]));
+            } else {
+                // Deselect
+                this.selectedRows = {};
+                this.$refs.table.clearSelected();
+            }
+            // Toggle
+            this.isSelectAllToggled = !this.isSelectAllToggled;
+        },
         loadData () {
             const idmInstance = this.getRequestService(),
                 managedObjectsSettings = this.$root.applicationStore.state.managedObjectsSettings;
@@ -278,6 +362,10 @@ export default {
             /* istanbul ignore next */
             this.currentPage = page;
             this.loadGrid(this.generateSearch(this.filter, this.displayFields, this.schemaProperties), this.displayFields, this.calculateSort(this.sortDesc, this.sortBy), page);
+            // easier to clear the selections on this action than persist / accumulate
+            this.$refs.table.clearSelected();
+            this.selectedRows = {};
+            this.isSelectAllToggled = false;
         },
         search () {
             this.sortBy = null;
@@ -288,6 +376,10 @@ export default {
             if (!this.queryThreshold || !this.filter.length || this.filter.length >= this.queryThreshold) {
                 this.loadGrid(this.generateSearch(this.filter, this.displayFields, this.schemaProperties), this.displayFields, null, 1);
             }
+            // easier to clear the selections on this action than persist / accumulate
+            this.$refs.table.clearSelected();
+            this.selectedRows = {};
+            this.isSelectAllToggled = false;
         },
         clear () {
             this.filter = '';
@@ -297,7 +389,7 @@ export default {
 
             this.loadGrid('true', this.displayFields, null, 1);
         },
-        resourceClicked (item) {
+        resourceClicked (item, _, event) {
             if (this.userCanUpdate) {
                 this.$router.push({
                     name: 'EditResource',
