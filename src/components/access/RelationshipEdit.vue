@@ -261,7 +261,7 @@ export default {
 
                 this.setValue(this.relationshipProperty.key, { _ref: selected.value });
             } else {
-                this.selected = null;
+                this.selected = this.selected ? this.selected : null;
                 this.setValue(this.relationshipProperty.key, null);
             }
         }
