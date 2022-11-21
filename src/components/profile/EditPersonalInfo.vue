@@ -99,14 +99,130 @@ export default {
             formFields: [],
             originalFormFields: [],
             title: this.$t('pages.profile.editProfile.userDetailsTitle'),
-            selectListGender: [{
-                text: 'Male',
-                value: 'male'
-            },
-            {
-                text: 'Female',
-                value: 'female'
-            }]
+            selectLists: [
+                {
+                    id: 'societeJuridique',
+                    list: [
+                        {
+                            text: 'IRIS',
+                            value: 'IRIS'
+                        },
+                        {
+                            text: 'INFO-U',
+                            value: 'INFO-U'
+                        },
+                        {
+                            text: 'ULOG',
+                            value: 'ULOG'
+                        },
+                        {
+                            text: 'UENSEIGNE',
+                            value: 'UENSEIGNE'
+                        }
+                    ]
+                },
+                {
+                    id: 'sexe',
+                    list: [
+                        {
+                            text: 'Femme',
+                            value: 'F'
+                        },
+                        {
+                            text: 'Homme',
+                            value: 'M'
+                        },
+                        {
+                            text: 'Non renseigné',
+                            value: 'autre'
+                        }
+                    ]
+                },
+                {
+                    id: 'status',
+                    list: [
+                        {
+                            text: 'Actif',
+                            value: 'active'
+                        },
+                        {
+                            text: 'Inactif',
+                            value: 'inactive'
+                        },
+                        {
+                            text: 'Satut par défaut',
+                            value: 'default'
+                        }
+                    ]
+                },
+                {
+                    id: 'statusDate',
+                    list: [
+                        {
+                            text: 'Actif',
+                            value: 'active'
+                        },
+                        {
+                            text: 'Inactif',
+                            value: 'inactive'
+                        }
+                    ]
+                },
+                {
+                    id: 'contractNature',
+                    list: [
+                        {
+                            text: 'CDD',
+                            value: 'CDD'
+                        },
+                        {
+                            text: 'CDI',
+                            value: 'CDI'
+                        },
+                        {
+                            text: 'Intérimaire',
+                            value: 'Interimaire'
+                        },
+                        {
+                            text: 'Mandataire social',
+                            value: 'Mandataire social'
+                        },
+                        {
+                            text: 'Prestataire',
+                            value: 'Prestataire'
+                        },
+                        {
+                            text: 'Stagiaire contr.stag',
+                            value: 'Stagiaire contr.stag'
+                        },
+                        {
+                            text: 'Apprenti sous contrat',
+                            value: 'Apprenti sous contr.'
+                        }
+                    ]
+                },
+                {
+                    id: 'collaborationType',
+                    list: [
+                        {
+                            text: 'Salarié du Groupement',
+                            value: 'SAL'
+                        },
+                        {
+                            text: 'Intérimaire',
+                            value: 'INT'
+                        },
+                        {
+                            text: 'Prestataire',
+                            value: 'PRE'
+                        },
+                        {
+                            text: 'Stagiaire',
+                            value: 'STA'
+                        }
+                    ]
+                }
+            ]
         };
     },
     mounted () {
@@ -116,7 +232,7 @@ export default {
     },
     methods: {
         /**
-        * Use a suffix in name _select for select or otherwise render input by managed object type.
+        * Utilisez un suffixe après `name` `_select` pour créer un `<select>` ou rendre input[type] par 'Managed Object' par son type.
         * @param {object} field Data from IDM managed user object schema
         * @param {string} field.name The field name, could contain _select
         * @param {string} field.type The data type to be mapped to an input type
@@ -134,22 +250,22 @@ export default {
             }
         },
         /**
-        * Hard coded select lists
+        * Listes de sélection codées en dur
         * @docs https://bootstrap-vue.org/docs/components/form-select
         * @param {object} field Data from IDM managed user object schema
         * @param {string} field.name The field name
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ name }) {
-            switch (name) {
-            case 'gender_select':
-                return this.selectListGender;
-            default:
-                return [{
-                    text: 'No options available',
-                    value: ''
-                }];
+            const listFound = this.selectLists.find(list => list.id === name.replace('_select', ''));
+            if (listFound) {
+                return listFound.list;
             }
+            // Valeur par défaut (afficher par erreur)
+            return [{
+                text: 'Valeurs Indisponibles',
+                value: ''
+            }];
         },
         generateFormFields () {
             let { order, properties, required } = this.schema,
