@@ -160,8 +160,8 @@ export default {
     methods: {
         loadData () {
             const idmInstance = this.getRequestService();
-
-            /* istanbul ignore next */
+            
+             /* istanbul ignore next */
             axios.all([
                 this.getSchema(`${this.resource}/${this.name}`),
                 idmInstance.get(`privilege/${this.resource}/${this.name}/${this.id}`)]).then(axios.spread((schema, privilege) => {
@@ -174,6 +174,14 @@ export default {
 
                 idmInstance.get(resourceUrl).then((resourceDetails) => {
                     this.generateDisplay(schema.data, privilege.data, resourceDetails.data);
+                }).catch((error) => {
+                    this.displayNotification('error', error.response.data.message);
+                });
+
+                resourceUrl = `/endpoint/linkedView/managed/user/${this.id}`;
+
+                idmInstance.get(resourceUrl).then((resourceDetails) => {
+                    console.log('D', resourceDetails);
                 }).catch((error) => {
                     this.displayNotification('error', error.response.data.message);
                 });
@@ -218,7 +226,8 @@ export default {
             });
         },
         getRelationshipProperties (schema, privilege) {
-            return _.pickBy(schema.properties, (property, key) => {
+            const originalData = _.pickBy(schema.properties, (property, key) => {
+                console.log('>', property);
                 const hasPermission = privilege.VIEW.properties.indexOf(key) > -1 || privilege.UPDATE.properties.indexOf(key) > -1,
                     isRelationship = property.type === 'relationship' || (property.type === 'array' && property.items.type === 'relationship');
 
@@ -230,6 +239,59 @@ export default {
 
                 return isRelationship && hasPermission;
             });
+            console.log('ORIGINAL', originalData);
+            return {
+                ...originalData,
+                linkedSystems: {
+                    title: 'Linked Systems', // tab title
+                    viewable: true,
+                    searchable: false,
+                    userEditable: false,
+                    policies: [],
+                    returnByDefault: false,
+                    type: 'array', // will render as a tab
+                    items: {
+                        type: 'relationship',
+                        notifySelf: true,
+                        reverseRelationship: false,
+                        reversePropertyName: 'members',
+                        validate: true,
+                        properties: {
+                            _ref: {
+                                type: 'string'
+                            },
+                            '_refProperties': {
+                                'type': 'object',
+                                'properties': {
+                                    '_id': {
+                                        'type': 'string',
+                                        'required': false,
+                                        'propName': '_id'
+                                    }
+                                }
+                            }
+                        },
+                        resourceCollection: [
+                            // {
+                            //     notify: false,
+                            //     path: 'endpoint/linkedView',
+                            //     label: 'Linked System',
+                            //     query: {
+                            //         queryFilter: 'true',
+                            //         fields: [
+                            //             'name'
+                            //         ],
+                            //         sortKeys: []
+                            //     }
+                            // }
+                        ]
+                    },
+                    'propName': null,
+                    'readOnly': true,
+                    'isReadOnly': true,
+                    'key': 'linkedSystems'
+                }
+            };
         },
         generateDisplay (schema, privilege, resourceDetails) {
             this.oldFormFields = _.pick(resourceDetails, privilege.VIEW.properties);
