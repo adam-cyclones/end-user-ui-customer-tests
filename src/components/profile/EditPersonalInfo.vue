@@ -23,20 +23,18 @@ of the MIT license. See the LICENSE file for details.
                                     <label :for="field.title">{{field.title}}</label>
                                     <small v-if="!field.required" class="text-muted ml-1">{{$t('pages.profile.editProfile.optional')}}</small>
                                     <ValidationProvider :rules="`${field.required ? 'required' : ''}`"  :name="field.name" v-slot="validationContext">
-                                        <b-input
-                                            v-if="determineInputType(field) !== 'select'"
-                                            :name="field.name"
-                                            :type="determineInputType(field)"
-                                            :state="getValidationState(validationContext)"
-                                            v-model.trim="formFields[index].value" />
                                         <b-select
-                                            v-if="determineInputType(field) === 'select'"
+                                            v-if="field.name.endsWith('_select')"
                                             :name="field.name"
-                                            :type="determineInputType(field)"
                                             :state="getValidationState(validationContext)"
                                             :options="systemeUSelectLists(field)"
-                                            v-model.trim="formFields[index].value">
-                                        </b-select>
+                                            v-model.trim="formFields[index].value"/>
+                                        <b-input
+                                            v-if="!field.name.endsWith('_select')"
+                                            :name="field.name"
+                                            :type="field.type === 'string' ? 'text' : field.type"
+                                            :state="getValidationState(validationContext)"
+                                            v-model.trim="formFields[index].value" />
                                         <b-form-invalid-feedback>{{ validationContext.errors[0] }}</b-form-invalid-feedback>
                                     </ValidationProvider>
                                 </b-form-group>
@@ -99,130 +97,7 @@ export default {
             formFields: [],
             originalFormFields: [],
             title: this.$t('pages.profile.editProfile.userDetailsTitle'),
-            selectLists: [
-                {
-                    id: 'societeJuridique',
-                    list: [
-                        {
-                            text: 'IRIS',
-                            value: 'IRIS'
-                        },
-                        {
-                            text: 'INFO-U',
-                            value: 'INFO-U'
-                        },
-                        {
-                            text: 'ULOG',
-                            value: 'ULOG'
-                        },
-                        {
-                            text: 'UENSEIGNE',
-                            value: 'UENSEIGNE'
-                        }
-                    ]
-                },
-                {
-                    id: 'sexe',
-                    list: [
-                        {
-                            text: 'Femme',
-                            value: 'F'
-                        },
-                        {
-                            text: 'Homme',
-                            value: 'M'
-                        },
-                        {
-                            text: 'Non renseigné',
-                            value: 'autre'
-                        }
-                    ]
-                },
-                {
-                    id: 'status',
-                    list: [
-                        {
-                            text: 'Actif',
-                            value: 'active'
-                        },
-                        {
-                            text: 'Inactif',
-                            value: 'inactive'
-                        },
-                        {
-                            text: 'Satut par défaut',
-                            value: 'default'
-                        }
-                    ]
-                },
-                {
-                    id: 'statusDate',
-                    list: [
-                        {
-                            text: 'Actif',
-                            value: 'active'
-                        },
-                        {
-                            text: 'Inactif',
-                            value: 'inactive'
-                        }
-                    ]
-                },
-                {
-                    id: 'contractNature',
-                    list: [
-                        {
-                            text: 'CDD',
-                            value: 'CDD'
-                        },
-                        {
-                            text: 'CDI',
-                            value: 'CDI'
-                        },
-                        {
-                            text: 'Intérimaire',
-                            value: 'Interimaire'
-                        },
-                        {
-                            text: 'Mandataire social',
-                            value: 'Mandataire social'
-                        },
-                        {
-                            text: 'Prestataire',
-                            value: 'Prestataire'
-                        },
-                        {
-                            text: 'Stagiaire contr.stag',
-                            value: 'Stagiaire contr.stag'
-                        },
-                        {
-                            text: 'Apprenti sous contrat',
-                            value: 'Apprenti sous contr.'
-                        }
-                    ]
-                },
-                {
-                    id: 'collaborationType',
-                    list: [
-                        {
-                            text: 'Salarié du Groupement',
-                            value: 'SAL'
-                        },
-                        {
-                            text: 'Intérimaire',
-                            value: 'INT'
-                        },
-                        {
-                            text: 'Prestataire',
-                            value: 'PRE'
-                        },
-                        {
-                            text: 'Stagiaire',
-                            value: 'STA'
-                        }
-                    ]
-                }
-            ]
+            systemeUSelectListsData: this.$root.applicationStore.getSystemeUSelectLists()
         };
     },
     mounted () {
@@ -232,24 +107,6 @@ export default {
     },
     methods: {
         /**
-        * Utilisez un suffixe après `name` `_select` pour créer un `<select>` ou rendre input[type] par 'Managed Object' par son type.
-        * @param {object} field Data from IDM managed user object schema
-        * @param {string} field.name The field name, could contain _select
-        * @param {string} field.type The data type to be mapped to an input type
-        * @return {string} Form field input type to render
-        */
-        determineInputType ({ type, name }) {
-            switch (type) {
-            case 'string':
-                if (name.endsWith('_select')) {
-                    return 'select';
-                }
-                return 'text';
-            default:
-                return type;
-            }
-        },
-        /**
         * Listes de sélection codées en dur
         * @docs https://bootstrap-vue.org/docs/components/form-select
         * @param {object} field Data from IDM managed user object schema
@@ -257,7 +114,7 @@ export default {
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ name }) {
-            const listFound = this.selectLists.find(list => list.id === name.replace('_select', ''));
+            const listFound = this.systemeUSelectListsData.find(list => list.id === name.replace('_select', ''));
             if (listFound) {
                 return listFound.list;
             }

@@ -26,7 +26,134 @@ export default {
         registration: false,
         idmBaseURL: '/openidm',
         theme: 'default',
-        managedObjectsSettings: null
+        managedObjectsSettings: null,
+        /**
+         * @deprecated to be removed in future release
+        */
+        systemeUSelectLists: [
+            {
+                id: 'societeJuridique',
+                list: [
+                    {
+                        text: 'IRIS',
+                        value: 'IRIS'
+                    },
+                    {
+                        text: 'INFO-U',
+                        value: 'INFO-U'
+                    },
+                    {
+                        text: 'ULOG',
+                        value: 'ULOG'
+                    },
+                    {
+                        text: 'UENSEIGNE',
+                        value: 'UENSEIGNE'
+                    }
+                ]
+            },
+            {
+                id: 'sexe',
+                list: [
+                    {
+                        text: 'Femme',
+                        value: 'F'
+                    },
+                    {
+                        text: 'Homme',
+                        value: 'M'
+                    },
+                    {
+                        text: 'Non renseigné',
+                        value: 'autre'
+                    }
+                ]
+            },
+            {
+                id: 'status',
+                list: [
+                    {
+                        text: 'Actif',
+                        value: 'active'
+                    },
+                    {
+                        text: 'Inactif',
+                        value: 'inactive'
+                    },
+                    {
+                        text: 'Satut par défaut',
+                        value: 'default'
+                    }
+                ]
+            },
+            {
+                id: 'statusDate',
+                list: [
+                    {
+                        text: 'Actif',
+                        value: 'active'
+                    },
+                    {
+                        text: 'Inactif',
+                        value: 'inactive'
+                    }
+                ]
+            },
+            {
+                id: 'contractNature',
+                list: [
+                    {
+                        text: 'CDD',
+                        value: 'CDD'
+                    },
+                    {
+                        text: 'CDI',
+                        value: 'CDI'
+                    },
+                    {
+                        text: 'Intérimaire',
+                        value: 'Interimaire'
+                    },
+                    {
+                        text: 'Mandataire social',
+                        value: 'Mandataire social'
+                    },
+                    {
+                        text: 'Prestataire',
+                        value: 'Prestataire'
+                    },
+                    {
+                        text: 'Stagiaire contr.stag',
+                        value: 'Stagiaire contr.stag'
+                    },
+                    {
+                        text: 'Apprenti sous contrat',
+                        value: 'Apprenti sous contr.'
+                    }
+                ]
+            },
+            {
+                id: 'collaborationType',
+                list: [
+                    {
+                        text: 'Salarié du Groupement',
+                        value: 'SAL'
+                    },
+                    {
+                        text: 'Intérimaire',
+                        value: 'INT'
+                    },
+                    {
+                        text: 'Prestataire',
+                        value: 'PRE'
+                    },
+                    {
+                        text: 'Stagiaire',
+                        value: 'STA'
+                    }
+                ]
+            }
+        ]
     },
 
     setEnvironment (env) {
@@ -94,5 +221,9 @@ export default {
         this.state.passwordReset = false;
         this.state.usernameRecovery = false;
         this.state.registration = false;
+    },
+
+    getSystemeUSelectLists () {
+        return _.clone(this.state.systemeUSelectLists);
     }
 };
