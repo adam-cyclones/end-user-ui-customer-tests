@@ -62,6 +62,34 @@ of the MIT license. See the LICENSE file for details.
                     <fr-relationship-array :parentResource='resource + "/" + name' :parentId='id' :relationshipArrayProperty='relationshipProperty'/>
                 </b-tab>
             </template>
+            <b-tab
+                key="linkedSystems_tab"
+                :title="$t('pages.linkedSystems.tabName')">
+                <b-card>
+                    <b-card-body>
+                        <b-form-group :label="$t('pages.linkedSystems.filterLabel')">
+                            <b-form-checkbox-group
+                                id="checkbox-group-2"
+                                v-model="linkedSystemsFilterSelections"
+                                name="selections"
+                                stacked
+                            >
+                                <b-form-checkbox v-for="(linkedSystem, indexKeyname) in linkedSystems" name='linkedSystemsVisibility' :key="indexKeyname" :value="indexKeyname">{{formatLinkedSystemsPathnameToName(indexKeyname)}}</b-form-checkbox>
+                            </b-form-checkbox-group>
+                        </b-form-group>
+                    </b-card-body>
+                </b-card>
+                <div
+                    class='linked-system-card'
+                    v-show="linkedSystemsFilterSelections.includes(indexKeyname)"
+                    v-for="(linkedSystem, indexKeyname) in linkedSystems" :key="linkedSystem.key">
+                    <h6 class='mt-4 ml-2 mb-2 text-muted'>{{formatLinkedSystemsPathnameToName(indexKeyname)}}</h6>
+                    <fr-object-type-editor
+                        :form-fields="linkedSystem"
+                        :display-properties="linkedSystemsDisplayProperties.filter(item => Object.keys(linkedSystem).includes(item.key))"
+                        :disable-save-button="true" />
+                </div>
+            </b-tab>
         </b-tabs>
 
         <b-modal v-if="canDelete" id="deleteModal"
@@ -151,17 +179,22 @@ export default {
             formFields: {},
             oldFormFields: {},
             objectTypeProperties: {},
-            relationshipProperties: {}
+            relationshipProperties: {},
+            linkedSystems: {},
+            linkedSystemsDisplayProperties: [],
+            linkedSystemsFilterSelections: []
         };
     },
     mounted () {
         this.loadData();
     },
     methods: {
+        formatLinkedSystemsPathnameToName (str) {
+            return str.split('/')[1];
+        },
         loadData () {
             const idmInstance = this.getRequestService();
-            
-             /* istanbul ignore next */
+
             axios.all([
                 this.getSchema(`${this.resource}/${this.name}`),
                 idmInstance.get(`privilege/${this.resource}/${this.name}/${this.id}`)]).then(axios.spread((schema, privilege) => {
@@ -181,7 +214,40 @@ export default {
                 resourceUrl = `/endpoint/linkedView/managed/user/${this.id}`;
 
                 idmInstance.get(resourceUrl).then((resourceDetails) => {
-                    console.log('D', resourceDetails);
+                    // TODO: make a function
+                    const linkedTo = resourceDetails.data?.linkedTo || [];
+                    if (linkedTo.length) {
+                        linkedTo.forEach((linkedSystem) => {
+                            // we need to get our linked systems into state, seperated by key.
+                            this.linkedSystems[linkedSystem.resourceName] = {
+                                ...linkedSystem.content
+                            };
+
+                            // Create display properties
+                            Object.entries(linkedSystem.content).forEach((entry) => {
+                                const
+                                    [key, value] = entry,
+                                    type = typeof value;
+                                this.linkedSystemsDisplayProperties.push({
+                                    key,
+                                    description: '',
+                                    isPersonal: true,
+                                    policies: [],
+                                    propName: key,
+                                    required: false,
+                                    searchable: true,
+                                    title: key,
+                                    type,
+                                    viewable: true
+                                });
+
+                                // Setup filtering default value to show by default
+                                this.linkedSystemsFilterSelections[key] = true;
+                            });
+                        });
+                        // Force update reactivity because of array
+                        this.$forceUpdate();
+                    }
                 }).catch((error) => {
                     this.displayNotification('error', error.response.data.message);
                 });
@@ -226,8 +292,7 @@ export default {
             });
         },
         getRelationshipProperties (schema, privilege) {
-            const originalData = _.pickBy(schema.properties, (property, key) => {
-                console.log('>', property);
+            return _.pickBy(schema.properties, (property, key) => {
                 const hasPermission = privilege.VIEW.properties.indexOf(key) > -1 || privilege.UPDATE.properties.indexOf(key) > -1,
                     isRelationship = property.type === 'relationship' || (property.type === 'array' && property.items.type === 'relationship');
 
@@ -239,59 +304,6 @@ export default {
 
                 return isRelationship && hasPermission;
             });
-            console.log('ORIGINAL', originalData);
-            return {
-                ...originalData,
-                linkedSystems: {
-                    title: 'Linked Systems', // tab title
-                    viewable: true,
-                    searchable: false,
-                    userEditable: false,
-                    policies: [],
-                    returnByDefault: false,
-                    type: 'array', // will render as a tab
-                    items: {
-                        type: 'relationship',
-                        notifySelf: true,
-                        reverseRelationship: false,
-                        reversePropertyName: 'members',
-                        validate: true,
-                        properties: {
-                            _ref: {
-                                type: 'string'
-                            },
-                            '_refProperties': {
-                                'type': 'object',
-                                'properties': {
-                                    '_id': {
-                                        'type': 'string',
-                                        'required': false,
-                                        'propName': '_id'
-                                    }
-                                }
-                            }
-                        },
-                        resourceCollection: [
-                            // {
-                            //     notify: false,
-                            //     path: 'endpoint/linkedView',
-                            //     label: 'Linked System',
-                            //     query: {
-                            //         queryFilter: 'true',
-                            //         fields: [
-                            //             'name'
-                            //         ],
-                            //         sortKeys: []
-                            //     }
-                            // }
-                        ]
-                    },
-                    'propName': null,
-                    'readOnly': true,
-                    'isReadOnly': true,
-                    'key': 'linkedSystems'
-                }
-            };
         },
         generateDisplay (schema, privilege, resourceDetails) {
             this.oldFormFields = _.pick(resourceDetails, privilege.VIEW.properties);
@@ -462,6 +474,12 @@ export default {
     /deep/ {
         .nav-bar-border {
             border-bottom: 1px solid $gray-300;
+        }
+
+        .linked-system-card .form-control-plaintext {
+            border: 1px solid #C0C9D5;
+            padding: 0.75rem 1.25rem;
+            border-radius: 4px;
         }
     }
 </style>

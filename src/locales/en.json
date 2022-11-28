@@ -140,6 +140,10 @@
             "forgotUsername": "Forgot username?",
             "forgotPassword": "Forgot password?"
         },
+        "linkedSystems": {
+            "tabName": "Linked Systems",
+            "filterLabel": "Linked Systems Visibility"
+        },
         "selfservice": {
             "signIn": "Sign in",
             "captchaError": "ReCaptcha configured improperly - contact your administrator.",
