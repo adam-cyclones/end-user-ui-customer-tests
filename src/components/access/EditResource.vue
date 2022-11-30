@@ -258,7 +258,8 @@ export default {
                                     searchable: true,
                                     title: key,
                                     type,
-                                    viewable: true
+                                    viewable: true,
+                                    fields: type === 'array' ? value : null
                                 });
                             });
                         }
