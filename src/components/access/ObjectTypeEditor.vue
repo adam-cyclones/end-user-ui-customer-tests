@@ -52,6 +52,14 @@ of the MIT license. See the LICENSE file for details.
                   </ValidationProvider>
               </template>
               <template v-else>
+
+                  <b-form-group :label="field.title" label-for="field.key" horizontal :key="'readResource' +index" v-if="(field.type === 'array') && renderArrayFields && field.encryption === undefined">
+                      <b-list-group>
+                        <b-list-group-item v-for="(value, index) of field.fields" :key="`${field.key}_${index}`">{{value}}</b-list-group-item>
+                        <b-list-group-item disabled class='text-center' v-if='field.fields.length === 0'>{{$t('pages.linkedSystems.noItemsInFieldList')}}</b-list-group-item>
+                      </b-list-group>
+                  </b-form-group>
+
                   <b-form-group :label="field.title" label-for="field.key" horizontal :key="'readResource' +index" v-if="(field.type === 'string' || field.type === 'number') && field.encryption === undefined">
                       <b-form-input horizontal
                           type="text"
@@ -121,6 +129,10 @@ export default {
         displayProperties: {
             type: Array,
             default: () => []
+        },
+        renderArrayFields: {
+            type: Boolean,
+            default: () => false
         },
         formFields: {
             type: Object,

@@ -62,6 +62,43 @@ of the MIT license. See the LICENSE file for details.
                     <fr-relationship-array :parentResource='resource + "/" + name' :parentId='id' :relationshipArrayProperty='relationshipProperty'/>
                 </b-tab>
             </template>
+            <b-tab
+                v-if="showLinkedToTab"
+                key="linkedSystems_tab"
+                :title="$t('pages.linkedSystems.tabName')">
+                <b-card>
+                    <b-card-header v-if="linkedSystemsMissingResources.length">
+                        <b-alert show variant="danger">
+                            <p
+                                v-for="(error, index) in linkedSystemsMissingResources"
+                                :key="`missing_resource_error_${index}`">{{error}}</p>
+                        </b-alert>
+                    </b-card-header>
+                    <b-card-body>
+                        <b-form-group :label="$t('pages.linkedSystems.filterLabel')">
+                            <b-form-checkbox-group
+                                id="checkbox-group-2"
+                                v-model="linkedSystemsFilterSelections"
+                                name="selections"
+                                stacked
+                            >
+                                <b-form-checkbox v-for="(linkedSystem, indexKeyname) in linkedSystems" name='linkedSystemsVisibility' :key="indexKeyname" :value="indexKeyname">{{formatLinkedSystemsPathnameToName(indexKeyname)}}</b-form-checkbox>
+                            </b-form-checkbox-group>
+                        </b-form-group>
+                    </b-card-body>
+                </b-card>
+                <div
+                    class='linked-system-card'
+                    v-show="linkedSystemsFilterSelections.includes(indexKeyname)"
+                    v-for="(linkedSystem, indexKeyname) in linkedSystems" :key="linkedSystem.key">
+                    <h6 class='mt-4 ml-2 mb-2 text-muted'>{{formatLinkedSystemsPathnameToName(indexKeyname)}}</h6>
+                    <fr-object-type-editor
+                        :renderArrayFields="true"
+                        :form-fields="linkedSystem"
+                        :display-properties="linkedSystemsDisplayProperties.filter(item => Object.keys(linkedSystem).includes(item.key))"
+                        :disable-save-button="true" />
+                </div>
+            </b-tab>
         </b-tabs>
 
         <b-modal v-if="canDelete" id="deleteModal"
@@ -151,17 +188,27 @@ export default {
             formFields: {},
             oldFormFields: {},
             objectTypeProperties: {},
-            relationshipProperties: {}
+            relationshipProperties: {},
+            linkedSystems: {},
+            linkedSystemsDisplayProperties: [],
+            linkedSystemsFilterSelections: [],
+            linkedSystemsMissingResources: [],
+            showLinkedToTab: false
         };
     },
     mounted () {
         this.loadData();
     },
     methods: {
+        setLinkedToVisibility (value) {
+            this.showLinkedToTab = value;
+        },
+        formatLinkedSystemsPathnameToName (str) {
+            return str.split('/')[1];
+        },
         loadData () {
             const idmInstance = this.getRequestService();
 
-            /* istanbul ignore next */
             axios.all([
                 this.getSchema(`${this.resource}/${this.name}`),
                 idmInstance.get(`privilege/${this.resource}/${this.name}/${this.id}`)]).then(axios.spread((schema, privilege) => {
@@ -177,8 +224,59 @@ export default {
                 }).catch((error) => {
                     this.displayNotification('error', error.response.data.message);
                 });
+
+                resourceUrl = `/endpoint/linkedView/managed/user/${this.id}`;
+
+                idmInstance.get(resourceUrl).then((resourceDetails) => {
+                    // MOCK
+                    let linkedTo = resourceDetails.data?.linkedTo || [];
+                    if (linkedTo.length) {
+                        this.setLinkedToVisibility(true);
+                        for (const linkedSystem of linkedTo) {
+                            // Something went wrong missing resource
+                            if (!linkedSystem.content) {
+                                this.linkedSystemsMissingResources = [...this.linkedSystemsMissingResources, `${this.$t('pages.linkedSystems.missingResource')}: ${linkedSystem.resourceName}`];
+                                continue;
+                            }
+                            // we need to get our linked systems into state, seperated by key.
+                            this.linkedSystems[linkedSystem.resourceName] = {
+                                ...linkedSystem.content
+                            };
+
+                            // Create display properties
+                            Object.entries(linkedSystem.content).forEach((entry) => {
+                                const
+                                    [key, value] = entry,
+                                    type = typeof value !== 'object' ? typeof value : Array.isArray(value) ? 'array' : 'object';
+                                this.linkedSystemsDisplayProperties.push({
+                                    key,
+                                    description: '',
+                                    isPersonal: true,
+                                    policies: [],
+                                    propName: key,
+                                    required: false,
+                                    searchable: true,
+                                    title: key,
+                                    type,
+                                    viewable: true,
+                                    fields: type === 'array' ? value : null
+                                });
+                            });
+                        }
+                        // Force update reactivity because of array
+                        this.$forceUpdate();
+                    }
+                }).catch((error) => {
+                    if (!error.data) {
+                        console.error(error);
+                    }
+                    this.displayNotification('error', error.response.data.message);
+                });
             }))
                 .catch((error) => {
+                    if (!error.data) {
+                        console.error(error);
+                    }
                     this.displayNotification('error', error.response.data.message);
                 });
         },
@@ -400,6 +498,12 @@ export default {
     /deep/ {
         .nav-bar-border {
             border-bottom: 1px solid $gray-300;
+        }
+
+        .linked-system-card .form-control-plaintext {
+            border: 1px solid #C0C9D5;
+            padding: 0.75rem 1.25rem;
+            border-radius: 4px;
         }
     }
 </style>

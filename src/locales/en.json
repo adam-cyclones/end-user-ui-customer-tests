@@ -140,6 +140,12 @@
             "forgotUsername": "Forgot username?",
             "forgotPassword": "Forgot password?"
         },
+        "linkedSystems": {
+            "noItemsInFieldList": "No items",
+            "missingResource": "Resource has been moved or deleted",
+            "tabName": "Linked Systems",
+            "filterLabel": "Linked Systems Visibility"
+        },
         "selfservice": {
             "signIn": "Sign in",
             "captchaError": "ReCaptcha configured improperly - contact your administrator.",
