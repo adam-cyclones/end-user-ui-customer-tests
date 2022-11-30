@@ -63,9 +63,17 @@ of the MIT license. See the LICENSE file for details.
                 </b-tab>
             </template>
             <b-tab
+                v-if="showLinkedToTab"
                 key="linkedSystems_tab"
                 :title="$t('pages.linkedSystems.tabName')">
                 <b-card>
+                    <b-card-header v-if="linkedSystemsMissingResources.length">
+                        <b-alert show variant="danger">
+                            <p
+                                v-for="(error, index) in linkedSystemsMissingResources"
+                                :key="`missing_resource_error_${index}`">{{error}}</p>
+                        </b-alert>
+                    </b-card-header>
                     <b-card-body>
                         <b-form-group :label="$t('pages.linkedSystems.filterLabel')">
                             <b-form-checkbox-group
@@ -85,6 +93,7 @@ of the MIT license. See the LICENSE file for details.
                     v-for="(linkedSystem, indexKeyname) in linkedSystems" :key="linkedSystem.key">
                     <h6 class='mt-4 ml-2 mb-2 text-muted'>{{formatLinkedSystemsPathnameToName(indexKeyname)}}</h6>
                     <fr-object-type-editor
+                        :renderArrayFields="true"
                         :form-fields="linkedSystem"
                         :display-properties="linkedSystemsDisplayProperties.filter(item => Object.keys(linkedSystem).includes(item.key))"
                         :disable-save-button="true" />
@@ -182,13 +191,18 @@ export default {
             relationshipProperties: {},
             linkedSystems: {},
             linkedSystemsDisplayProperties: [],
-            linkedSystemsFilterSelections: []
+            linkedSystemsFilterSelections: [],
+            linkedSystemsMissingResources: [],
+            showLinkedToTab: false
         };
     },
     mounted () {
         this.loadData();
     },
     methods: {
+        setLinkedToVisibility (value) {
+            this.showLinkedToTab = value;
+        },
         formatLinkedSystemsPathnameToName (str) {
             return str.split('/')[1];
         },
@@ -214,10 +228,16 @@ export default {
                 resourceUrl = `/endpoint/linkedView/managed/user/${this.id}`;
 
                 idmInstance.get(resourceUrl).then((resourceDetails) => {
-                    // TODO: make a function
-                    const linkedTo = resourceDetails.data?.linkedTo || [];
+                    // MOCK
+                    let linkedTo = resourceDetails.data?.linkedTo || [];
                     if (linkedTo.length) {
-                        linkedTo.forEach((linkedSystem) => {
+                        this.setLinkedToVisibility(true);
+                        for (const linkedSystem of linkedTo) {
+                            // Something went wrong missing resource
+                            if (!linkedSystem.content) {
+                                this.linkedSystemsMissingResources = [...this.linkedSystemsMissingResources, `${this.$t('pages.linkedSystems.missingResource')}: ${linkedSystem.resourceName}`];
+                                continue;
+                            }
                             // we need to get our linked systems into state, seperated by key.
                             this.linkedSystems[linkedSystem.resourceName] = {
                                 ...linkedSystem.content
@@ -227,7 +247,7 @@ export default {
                             Object.entries(linkedSystem.content).forEach((entry) => {
                                 const
                                     [key, value] = entry,
-                                    type = typeof value;
+                                    type = typeof value !== 'object' ? typeof value : Array.isArray(value) ? 'array' : 'object';
                                 this.linkedSystemsDisplayProperties.push({
                                     key,
                                     description: '',
@@ -240,19 +260,22 @@ export default {
                                     type,
                                     viewable: true
                                 });
-
-                                // Setup filtering default value to show by default
-                                this.linkedSystemsFilterSelections[key] = true;
                             });
-                        });
+                        }
                         // Force update reactivity because of array
                         this.$forceUpdate();
                     }
                 }).catch((error) => {
+                    if (!error.data) {
+                        console.error(error);
+                    }
                     this.displayNotification('error', error.response.data.message);
                 });
             }))
                 .catch((error) => {
+                    if (!error.data) {
+                        console.error(error);
+                    }
                     this.displayNotification('error', error.response.data.message);
                 });
         },

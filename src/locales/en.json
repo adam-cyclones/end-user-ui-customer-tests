@@ -141,6 +141,7 @@
             "forgotPassword": "Forgot password?"
         },
         "linkedSystems": {
+            "missingResource": "Resource has been moved or deleted",
             "tabName": "Linked Systems",
             "filterLabel": "Linked Systems Visibility"
         },
