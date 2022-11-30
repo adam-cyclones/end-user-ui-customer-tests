@@ -12,14 +12,14 @@ of the MIT license. See the LICENSE file for details.
               <template v-if="!field.isReadOnly && !disableSaveButton">
                   <ValidationProvider v-if="(field.type === 'string' || field.type === 'number' || field.type === 'boolean' || field.type === 'relationship')" :key="'editResource' +field.key" :name="field.title" :vid="field.key" :rules="field.required ? 'required' : ''" v-slot="validationContext">
                       <b-form-group :label="field.title" label-for="field.key" horizontal v-if="(field.type === 'string' || field.type === 'number') && field.encryption === undefined">
-                          <b-select v-if="field.type === 'string' && field.key.endsWith('_select')" :ref="index === 0 ? 'focusInput' : ''"
+                          <b-select v-if="field.type === 'string' && systemeUSelectListsData.find(list => list.id === field.key)" :ref="index === 0 ? 'focusInput' : ''"
                               :name="field.key"
                               :state="getValidationState(validationContext)"
                               :options="systemeUSelectLists(field)"
                               v-model.trim="formFields[field.key]"
                               :autocomplete="field.key"></b-select>
 
-                          <b-form-input v-else-if="field.type === 'string' && !field.key.endsWith('_select')" :ref="index === 0 ? 'focusInput' : ''"
+                          <b-form-input v-else-if="field.type === 'string' && !systemeUSelectListsData.find(list => list.id === field.key)" :ref="index === 0 ? 'focusInput' : ''"
                               :name="field.key"
                               type="text"
                               :state="getValidationState(validationContext)"
@@ -169,7 +169,7 @@ export default {
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ key: name }) {
-            const listFound = this.systemeUSelectListsData.find(list => list.id === name.replace('_select', ''));
+            const listFound = this.systemeUSelectListsData.find(list => list.id === name);
             if (listFound) {
                 return listFound.list;
             }

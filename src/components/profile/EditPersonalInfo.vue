@@ -24,13 +24,13 @@ of the MIT license. See the LICENSE file for details.
                                     <small v-if="!field.required" class="text-muted ml-1">{{$t('pages.profile.editProfile.optional')}}</small>
                                     <ValidationProvider :rules="`${field.required ? 'required' : ''}`"  :name="field.name" v-slot="validationContext">
                                         <b-select
-                                            v-if="field.name.endsWith('_select')"
+                                            v-if="systemeUSelectListsData.find(list => list.id === field.key)"
                                             :name="field.name"
                                             :state="getValidationState(validationContext)"
                                             :options="systemeUSelectLists(field)"
                                             v-model.trim="formFields[index].value"/>
                                         <b-input
-                                            v-if="!field.name.endsWith('_select')"
+                                            v-else
                                             :name="field.name"
                                             :type="field.type === 'string' ? 'text' : field.type"
                                             :state="getValidationState(validationContext)"
@@ -114,7 +114,7 @@ export default {
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ name }) {
-            const listFound = this.systemeUSelectListsData.find(list => list.id === name.replace('_select', ''));
+            const listFound = this.systemeUSelectListsData.find(list => list.id === name);
             if (listFound) {
                 return listFound.list;
             }
