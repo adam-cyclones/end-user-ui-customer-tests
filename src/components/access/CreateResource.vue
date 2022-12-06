@@ -186,7 +186,6 @@ export default {
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ key }) {
-            console.log(arguments);
             const listFound = this.systemeUSelectListsData.find(list => list.id === key);
             if (listFound) {
                 return listFound.list;
