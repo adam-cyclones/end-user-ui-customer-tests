@@ -22,7 +22,14 @@ of the MIT license. See the LICENSE file for details.
                                 <label v-if="field.title" class="float-left" :for="'create-resource-' +field.key">{{field.title}}</label>
                                 <label v-else class="float-left" :for="'create-resource-' +field.key">{{field.key}}</label>
                                 <ValidationProvider :rules="`${field.required ? 'required' : ''}`" :name="field.title" :vid="field.key" v-slot="validationContext">
+                                    <b-select
+                                        v-if="systemeUSelectListsData.find(list => list.id === field.key)"
+                                        :name="field.name"
+                                        :state="getValidationState(validationContext)"
+                                        :options="systemeUSelectLists(field)"
+                                        v-model.trim="formFields[index]"/>
                                     <b-form-input
+                                        v-else
                                         :id="'create-resource-' +field.key"
                                         :type="field.type === 'string' ? 'text' : field.type"
                                         :state="getValidationState(validationContext)"
@@ -166,10 +173,30 @@ export default {
             passwordCheck: tempPasswordCheck,
             passwordInputType: 'password',
             showPassword: true,
-            disabled: false
+            disabled: false,
+            systemeUSelectListsData: this.$root.applicationStore.getSystemeUSelectLists()
         };
     },
     methods: {
+        /**
+        * Listes de sélection codées en dur
+        * @docs https://bootstrap-vue.org/docs/components/form-select
+        * @param {object} field Data from IDM managed user object schema
+        * @param {string} field.name The field name
+        * @return {Array<{text: string, value: string}>} Data to render a select list
+        */
+        systemeUSelectLists ({ key }) {
+            console.log(arguments);
+            const listFound = this.systemeUSelectListsData.find(list => list.id === key);
+            if (listFound) {
+                return listFound.list;
+            }
+            // Valeur par défaut (afficher par erreur)
+            return [{
+                text: 'Valeurs Indisponibles',
+                value: ''
+            }];
+        },
         saveForm () {
             /* istanbul ignore next */
             const idmInstance = this.getRequestService();
