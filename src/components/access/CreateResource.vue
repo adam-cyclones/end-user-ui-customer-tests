@@ -24,10 +24,10 @@ of the MIT license. See the LICENSE file for details.
                                 <ValidationProvider :rules="`${field.required ? 'required' : ''}`" :name="field.title" :vid="field.key" v-slot="validationContext">
                                     <b-select
                                         v-if="systemeUSelectListsData.find(list => list.id === field.key)"
-                                        :name="field.name"
+                                        :id="'create-resource-' +field.key"
                                         :state="getValidationState(validationContext)"
                                         :options="systemeUSelectLists(field)"
-                                        v-model.trim="formFields[index]"/>
+                                        v-model.trim="formFields[field.key]"/>
                                     <b-form-input
                                         v-else
                                         :id="'create-resource-' +field.key"
@@ -186,6 +186,7 @@ export default {
         * @return {Array<{text: string, value: string}>} Data to render a select list
         */
         systemeUSelectLists ({ key }) {
+            console.log(this.formFields);
             const listFound = this.systemeUSelectListsData.find(list => list.id === key);
             if (listFound) {
                 return listFound.list;
